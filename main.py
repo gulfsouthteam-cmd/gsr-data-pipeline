@@ -51,12 +51,8 @@ def parse_job_number(name):
     m = re.search(r'[-#]\s*(\d{3,5})\b', str(name))
     return m.group(1) if m else ""
 
-@app.route('/process', methods=['POST'])
-def process():
-    file = request.files.get('file')
-    if not file: return jsonify({"error": "No file"}), 400
-
-    wb = load_workbook(io.BytesIO(file.read()), data_only=True)
+def process_workbook(file_bytes):
+    wb = load_workbook(io.BytesIO(file_bytes), data_only=True)
     ws = wb.active
     all_rows = list(ws.iter_rows(values_only=True))
     period = str(all_rows[2][0]).strip()
@@ -79,16 +75,40 @@ def process():
         if not has_data(all_rows, col_i): continue
         project = str(headers[col_i]).strip()
         record = {
-            "period":               period,
-            "customer":             customer,
-            "project":              "" if project == customer else project,
-            "job_number":           parse_job_number(project),
+            "period": period,
+            "customer": customer,
+            "project": "" if project == customer else project,
+            "job_number": parse_job_number(project),
         }
         for key, row_idx in ROWS.items():
             record[key] = clean(all_rows[row_idx][col_i])
         records.append(record)
+    return records
 
-    return jsonify(records)
+@app.route('/process', methods=['POST'])
+def process():
+    # Try multipart file upload
+    file = request.files.get('file')
+    if file:
+        return jsonify(process_workbook(file.read()))
+
+    # Try raw binary body
+    if request.data:
+        try:
+            return jsonify(process_workbook(request.data))
+        except: pass
+
+    # Try base64 JSON body
+    if request.json:
+        import base64
+        data = request.json.get('data') or request.json.get('file')
+        if data:
+            try:
+                return jsonify(process_workbook(base64.b64decode(data)))
+            except Exception as e:
+                return jsonify({"error": str(e)}), 400
+
+    return jsonify({"error": "No file received"}), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
