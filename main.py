@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 from openpyxl import load_workbook
 import io, re, base64
@@ -6,46 +5,46 @@ import io, re, base64
 app = Flask(__name__)
 
 ROWS = {
-    "income_services":          6,   # 4000 Services
-    "income_scrap_metal":       7,   # 4050 Scrap Metal Sales
-    "income_equipter":          8,   # 4080 Equipter Lease Income
-    "income_returns":           9,   # 4090 Returns
-    "job_income":              10,   # Job Income
-    "income_total":            12,   # Total for Income
-    "licenses_permits":        14,   # 5010 Business licenses & permits
-    "commissions_cogs":        15,   # 5020 Commissions COGS
-    "cogs_base":               16,   # 5030 Cost of goods sold
-    "wcp_builders_mutual":     17,   # 6115 WCP Builders Mutual Policy
-    "bond":                    18,   # Bond
-    "cogs_30_total":           20,   # Total for 5030
-    "fortified_inspections":   21,   # 5035 Fortified Inspections
-    "equipment_rental":        22,   # 5040 Equipment Rental for Jobs
-    "equipment_hauling":       23,   # Equipment Hauling
-    "equipment_total":         24,   # Total for 5040
-    "fuel_gas":                25,   # 5200 Fuel & Gas
-    "hotels_travel":           26,   # 5210 Hotels/Travel COGS
-    "job_plans":               27,   # 5220 Job Plans
-    "materials":               28,   # 5230 Job Supplies & Materials
-    "mgmt_fees_cogs":          29,   # 5240 Management Fees COGS
-    "misc_service_cost":       30,   # 5250 Other Miscellaneous Service Cost
-    "permits":                 31,   # 5260 Permits
-    "purchases":               32,   # 5270 Purchases
-    "shipping":                33,   # 5280 Shipping
-    "subcontractors":          34,   # 5290 Subcontractor expenses
-    "labor_service_fees":      35,   # 5295 Labor Service Fees
-    "subcontractors_total":    36,   # Total for 5290
-    "tool_inventory":          37,   # 5300 Tool Inventory
-    "waste_removal":           38,   # 5310 Waste Removal
-    "commercial_package":      39,   # 5320 Commercial Package Policy
-    "field_payroll_taxes":     43,   # 5100 Field Payroll Taxes
-    "field_pto":               44,   # 5105 Field PTO
-    "field_wages":             45,   # 5110 Field Salaries & Wages
-    "field_401k":              46,   # 5115 Field Staff 401K Match
-    "field_health_insurance":  47,   # 5120 Field Staff Health Insurance
-    "field_payroll_fees":      48,   # 5125 Field Staff Payroll Fees
-    "labor_total":             49,   # Total for Field Staff Payroll
-    "total_cogs":              50,   # Total for Cost of Goods Sold
-    "gross_profit":            51,   # Gross Profit
+    "bond":                     18,
+    "cogs_30_total":            20,
+    "cogs_base":                16,
+    "commercial_package":       39,
+    "commissions_cogs":         15,
+    "equipment_hauling":        23,
+    "equipment_rental":         22,
+    "equipment_total":          24,
+    "field_401k":               46,
+    "field_health_insurance":   47,
+    "field_payroll_fees":       48,
+    "field_payroll_taxes":      43,
+    "field_pto":                44,
+    "field_wages":              45,
+    "fortified_inspections":    21,
+    "fuel_gas":                 25,
+    "gross_profit":             51,
+    "hotels_travel":            26,
+    "income_equipter":           8,
+    "income_returns":            9,
+    "income_scrap_metal":        7,
+    "income_services":           6,
+    "income_total":             12,
+    "job_income":               10,
+    "job_plans":                27,
+    "labor_service_fees":       35,
+    "labor_total":              49,
+    "licenses_permits":         14,
+    "materials":                28,
+    "mgmt_fees_cogs":           29,
+    "misc_service_cost":        30,
+    "permits":                  31,
+    "purchases":                32,
+    "shipping":                 33,
+    "subcontractors":           34,
+    "subcontractors_total":     36,
+    "tool_inventory":           37,
+    "total_cogs":               50,
+    "waste_removal":            38,
+    "wcp_builders_mutual":      17,
 }
 
 def clean(value):
@@ -87,13 +86,13 @@ def process_workbook(file_bytes):
         if not has_data(all_rows, col_i): continue
         project = str(headers[col_i]).strip()
         record = {
-            "period":     period,
             "customer":   customer,
-            "project":    "" if project == customer else project,
             "job_number": parse_job_number(project),
+            "period":     period,
+            "project":    "" if project == customer else project,
         }
-        for key, row_idx in ROWS.items():
-            record[key] = clean(all_rows[row_idx][col_i])
+        for key in sorted(ROWS.keys()):
+            record[key] = clean(all_rows[ROWS[key]][col_i])
         records.append(record)
 
     return records
