@@ -1,39 +1,51 @@
+
 from flask import Flask, request, jsonify
 from openpyxl import load_workbook
-import io, re
+import io, re, base64
 
 app = Flask(__name__)
 
-# Row indexes (0-based) for every COGS line item
 ROWS = {
     "income_services":          6,   # 4000 Services
     "income_scrap_metal":       7,   # 4050 Scrap Metal Sales
-    "income_total":             8,   # Total Income
-    "licenses_permits":        10,   # 5010 Business licenses & permits
-    "cogs_base":               11,   # 5030 Cost of goods sold
-    "wcp_builders_mutual":     12,   # 6115 WCP Builders Mutual Policy
-    "bond":                    13,   # Bond
-    "cogs_total":              14,   # Total 5030
-    "fortified_inspections":   15,   # 5035 Fortified Inspections
-    "equipment_rental":        16,   # 5040 Equipment Rental
-    "equipment_hauling":       17,   # Equipment Hauling
-    "equipment_total":         18,   # Total 5040
-    "fuel_gas":                19,   # 5200 Fuel & Gas
-    "hotels_travel":           20,   # 5210 Hotels/Travel
-    "job_plans":               21,   # 5220 Job Plans
-    "materials":               22,   # 5230 Job Supplies & Materials
-    "permits":                 23,   # 5260 Permits
-    "subcontractors":          24,   # 5290 Subcontractor expenses
-    "labor_service_fees":      25,   # 5295 Labor Service Fees
-    "subcontractors_total":    26,   # Total 5290
-    "tool_inventory":          27,   # 5300 Tool Inventory
-    "waste_removal":           28,   # 5310 Waste Removal
-    "commercial_package":      29,   # 5320 Commercial Package Policy
-    "field_payroll_taxes":     31,   # 5100 Field Payroll Taxes
-    "field_wages":             32,   # 5110 Field Salaries & Wages
-    "labor_total":             33,   # Total Field Staff Payroll
-    "total_cogs":              34,   # Total Cost of Goods Sold
-    "gross_profit":            35,   # Gross Profit
+    "income_equipter":          8,   # 4080 Equipter Lease Income
+    "income_returns":           9,   # 4090 Returns
+    "job_income":              10,   # Job Income
+    "income_total":            12,   # Total for Income
+    "licenses_permits":        14,   # 5010 Business licenses & permits
+    "commissions_cogs":        15,   # 5020 Commissions COGS
+    "cogs_base":               16,   # 5030 Cost of goods sold
+    "wcp_builders_mutual":     17,   # 6115 WCP Builders Mutual Policy
+    "bond":                    18,   # Bond
+    "cogs_30_total":           20,   # Total for 5030
+    "fortified_inspections":   21,   # 5035 Fortified Inspections
+    "equipment_rental":        22,   # 5040 Equipment Rental for Jobs
+    "equipment_hauling":       23,   # Equipment Hauling
+    "equipment_total":         24,   # Total for 5040
+    "fuel_gas":                25,   # 5200 Fuel & Gas
+    "hotels_travel":           26,   # 5210 Hotels/Travel COGS
+    "job_plans":               27,   # 5220 Job Plans
+    "materials":               28,   # 5230 Job Supplies & Materials
+    "mgmt_fees_cogs":          29,   # 5240 Management Fees COGS
+    "misc_service_cost":       30,   # 5250 Other Miscellaneous Service Cost
+    "permits":                 31,   # 5260 Permits
+    "purchases":               32,   # 5270 Purchases
+    "shipping":                33,   # 5280 Shipping
+    "subcontractors":          34,   # 5290 Subcontractor expenses
+    "labor_service_fees":      35,   # 5295 Labor Service Fees
+    "subcontractors_total":    36,   # Total for 5290
+    "tool_inventory":          37,   # 5300 Tool Inventory
+    "waste_removal":           38,   # 5310 Waste Removal
+    "commercial_package":      39,   # 5320 Commercial Package Policy
+    "field_payroll_taxes":     43,   # 5100 Field Payroll Taxes
+    "field_pto":               44,   # 5105 Field PTO
+    "field_wages":             45,   # 5110 Field Salaries & Wages
+    "field_401k":              46,   # 5115 Field Staff 401K Match
+    "field_health_insurance":  47,   # 5120 Field Staff Health Insurance
+    "field_payroll_fees":      48,   # 5125 Field Staff Payroll Fees
+    "labor_total":             49,   # Total for Field Staff Payroll
+    "total_cogs":              50,   # Total for Cost of Goods Sold
+    "gross_profit":            51,   # Gross Profit
 }
 
 def clean(value):
@@ -75,32 +87,29 @@ def process_workbook(file_bytes):
         if not has_data(all_rows, col_i): continue
         project = str(headers[col_i]).strip()
         record = {
-            "period": period,
-            "customer": customer,
-            "project": "" if project == customer else project,
+            "period":     period,
+            "customer":   customer,
+            "project":    "" if project == customer else project,
             "job_number": parse_job_number(project),
         }
         for key, row_idx in ROWS.items():
             record[key] = clean(all_rows[row_idx][col_i])
         records.append(record)
+
     return records
 
 @app.route('/process', methods=['POST'])
 def process():
-    # Try multipart file upload
     file = request.files.get('file')
     if file:
         return jsonify(process_workbook(file.read()))
 
-    # Try raw binary body
     if request.data:
         try:
             return jsonify(process_workbook(request.data))
         except: pass
 
-    # Try base64 JSON body
     if request.json:
-        import base64
         data = request.json.get('data') or request.json.get('file')
         if data:
             try:
