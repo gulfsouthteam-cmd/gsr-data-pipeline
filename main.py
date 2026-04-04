@@ -4,59 +4,56 @@ import io, re, base64
 
 app = Flask(__name__)
 
-ROWS = {
-    "bond":                     18,
-    "cogs_30_total":            20,
-    "cogs_base":                16,
-    "commercial_package":       39,
-    "commissions_cogs":         15,
-    "equipment_hauling":        23,
-    "equipment_rental":         22,
-    "equipment_total":          24,
-    "field_401k":               46,
-    "field_health_insurance":   47,
-    "field_payroll_fees":       48,
-    "field_payroll_taxes":      43,
-    "field_pto":                44,
-    "field_wages":              45,
-    "fortified_inspections":    21,
-    "fuel_gas":                 25,
-    "gross_profit":             51,
-    "hotels_travel":            26,
-    "income_equipter":           8,
-    "income_returns":            9,
-    "income_scrap_metal":        7,
-    "income_services":           6,
-    "income_total":             12,
-    "job_income":               10,
-    "job_plans":                27,
-    "labor_service_fees":       35,
-    "labor_total":              49,
-    "licenses_permits":         14,
-    "materials":                28,
-    "mgmt_fees_cogs":           29,
-    "misc_service_cost":        30,
-    "permits":                  31,
-    "purchases":                32,
-    "shipping":                 33,
-    "subcontractors":           34,
-    "subcontractors_total":     36,
-    "tool_inventory":           37,
-    "total_cogs":               50,
-    "waste_removal":            38,
-    "wcp_builders_mutual":      17,
+# Account name → output field name
+ACCOUNT_MAP = {
+    "4000 Services":                    "income_services",
+    "4050 Scrap Metal Sales":           "income_scrap_metal",
+    "4080 Equipter Lease Income":       "income_equipter",
+    "4090 Returns":                     "income_returns",
+    "Unapplied Cash Payment Income":    "unapplied_cash",
+    "Total for Income":                 "income_total",
+    "5010 Business licenses & permits": "licenses_permits",
+    "5020 Commissions COGS":            "commissions_cogs",
+    "5030 Cost of goods sold":          "cogs_base",
+    "6115 WCP -Builders Mutual Policy": "wcp_builders_mutual",
+    "Bond":                             "bond",
+    "Total for 5030 Cost of goods sold":"cogs_30_total",
+    "5035 Fortified Inspections":       "fortified_inspections",
+    "5040 Equipment Rental for Jobs":   "equipment_rental",
+    "Equipment Hauling":                "equipment_hauling",
+    "Total for 5040 Equipment Rental for Jobs": "equipment_total",
+    "5200 Fuel & Gas":                  "fuel_gas",
+    "5210 Hotels/Travel COGS":          "hotels_travel",
+    "5220 Job Plans":                   "job_plans",
+    "5230 Job Supplies & Materials":    "materials",
+    "5240 Management Fees COGS":        "mgmt_fees_cogs",
+    "5250 Other Miscellaneous Service Cost": "misc_service_cost",
+    "5260 Permits":                     "permits",
+    "5270 Purchases":                   "purchases",
+    "5280 Shipping":                    "shipping",
+    "5290 Subcontractor expenses":      "subcontractors",
+    "5295 Labor Service Fees":          "labor_service_fees",
+    "Total for 5290 Subcontractor expenses": "subcontractors_total",
+    "5300 Tool Inventory":              "tool_inventory",
+    "5310 Waste Removal":               "waste_removal",
+    "5320 Commercial Package Policy w/BM": "commercial_package",
+    "5100 Field Payroll Taxes":         "field_payroll_taxes",
+    "5105 Field PTO":                   "field_pto",
+    "5110 Field Salaries & Wages":      "field_wages",
+    "5115 Field Staff 401K Match":      "field_401k",
+    "5120 Field Staff Health Insurance":"field_health_insurance",
+    "5125 Field Staff Payroll Fees":    "field_payroll_fees",
+    "Total for Field Staff Payroll":    "labor_total",
+    "Total for Cost of Goods Sold":     "total_cogs",
+    "Gross Profit":                     "gross_profit",
 }
+
+ALL_FIELDS = sorted(ACCOUNT_MAP.values())
 
 def clean(value):
     if value is None: return 0.0
     if isinstance(value, (int, float)): return round(float(value), 2)
     return 0.0
-
-def has_data(all_rows, col_idx):
-    for r in [ROWS["income_total"], ROWS["materials"], ROWS["labor_total"], ROWS["total_cogs"]]:
-        v = all_rows[r][col_idx]
-        if v and isinstance(v, (int, float)) and v != 0: return True
-    return False
 
 def parse_job_number(name):
     m = re.search(r'[-#]\s*(\d{3,5})\b', str(name))
@@ -69,6 +66,15 @@ def process_workbook(file_bytes):
     period = str(all_rows[2][0]).strip()
     headers = all_rows[4]
 
+    # Build row index by account name
+    row_index = {}
+    for i, row in enumerate(all_rows):
+        label = row[0]
+        if label and str(label).strip() in ACCOUNT_MAP:
+            key = ACCOUNT_MAP[str(label).strip()]
+            row_index[key] = i
+
+    # Build customer/project column map
     col_to_customer = {}
     pending = []
     for i, h in enumerate(headers):
@@ -81,9 +87,19 @@ def process_workbook(file_bytes):
         else:
             pending.append(i)
 
+    # Build records
     records = []
     for col_i, customer in col_to_customer.items():
-        if not has_data(all_rows, col_i): continue
+        # Check if column has any data
+        has_data = False
+        for field, row_i in row_index.items():
+            v = all_rows[row_i][col_i]
+            if v and isinstance(v, (int, float)) and v != 0:
+                has_data = True
+                break
+        if not has_data:
+            continue
+
         project = str(headers[col_i]).strip()
         record = {
             "customer":   customer,
@@ -91,8 +107,10 @@ def process_workbook(file_bytes):
             "period":     period,
             "project":    "" if project == customer else project,
         }
-        for key in sorted(ROWS.keys()):
-            record[key] = clean(all_rows[ROWS[key]][col_i])
+        for field in ALL_FIELDS:
+            row_i = row_index.get(field)
+            record[field] = clean(all_rows[row_i][col_i]) if row_i is not None else 0.0
+
         records.append(record)
 
     return records
