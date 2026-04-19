@@ -50,6 +50,47 @@ ACCOUNT_MAP = {
     "Total for Cost of Goods Sold":                 "total_cogs",
     # Key summary rows
     "Gross Profit":                                 "gross_profit",
+    # Office expense sub-items
+    "6200 Building Security":                       "office_building_security",
+    "6205 Merchant account fees":                   "office_merchant_fees",
+    "6210 Office Cleaning":                         "office_cleaning",
+    "6215 Office Devices & Repairs":                "office_devices",
+    "6220 Office Food & Beverage":                  "office_food",
+    "6225 Office supplies":                         "office_supplies",
+    "6230 Shipping & postage":                      "office_shipping",
+    "6235 Software & apps":                         "office_software",
+    # Payroll sub-items
+    "6305 Employee retirement plans":               "payroll_retirement",
+    "Combined Insurance":                           "payroll_combined_insurance",
+    "6355 Overhead Payroll Taxes":                  "overhead_payroll_taxes",
+    "6385 Production Payroll Taxes":                "production_payroll_taxes",
+    "6395 Production Salaries & Wages":             "production_wages",
+    "6425 Sales Staff Payroll Taxes":               "sales_payroll_taxes",
+    "6430 Sales Staff Salaries & Wages":            "sales_wages",
+    "6445 Sheet Metal Shop Payroll Taxes":          "shop_payroll_taxes",
+    "6450 Sheet Metal Shop Salaries & Wages":       "shop_wages",
+    "Shop Health Insurance":                        "shop_health_insurance",
+    # Utilities sub-items
+    "6660 Phone service":                           "utilities_phone",
+    "Internet & TV services":                       "utilities_internet",
+    # Vehicle sub-items
+    "6675 Auto Insurance CAP Policy w/BM":          "vehicle_auto_insurance",
+    "6680 Parking & Tolls":                         "vehicle_parking",
+    "6685 Vehicle Registration":                    "vehicle_registration",
+    # Other income
+    "7000 Interest Earned":                         "other_interest",
+    "7110 Credit card rewards":                     "other_credit_rewards",
+    "7120 Rebates":                                 "other_rebates",
+    "7130 Sales Tax Discount":                      "other_sales_tax_discount",
+    "7140 Unrealized Gain (Loss)":                  "other_unrealized_gain",
+    "Total for Other Income":                       "other_income_total",
+    # Other expenses
+    "8000 Ask My Accountant":                       "other_exp_ask_accountant",
+    "8200 Depreciation expense":                    "other_exp_depreciation",
+    "8500 Reconciliation Discrepancies":            "other_exp_reconciliation",
+    "8505 Penalties & Interest":                    "other_exp_penalties",
+    "Total for Other Expenses":                     "other_expenses_total",
+    "Net Other Income":                             "net_other_income",
     # Expenses
     "6010 Advertising & marketing":                 "advertising",
     "6020 Auto & truck expense":                    "auto_truck",
@@ -207,6 +248,11 @@ def process_workbook(file_bytes):
         records.append(record)
 
     return records
+
+@app.route('/headers', methods=['GET'])
+def headers():
+    base = ["customer", "project", "job_number", "period"]
+    return jsonify(base + ALL_FIELDS)
 
 @app.route('/process', methods=['POST'])
 def process():
