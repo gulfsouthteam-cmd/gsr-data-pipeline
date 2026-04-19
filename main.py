@@ -223,16 +223,20 @@ def process_workbook(file_bytes):
             continue
         project_cols.append(i)
 
-    # Build records — one per project column that has any income data
+    # Build records — one per project column that has any meaningful activity
     records = []
-    income_row = row_index.get("income_total")
+    key_rows = [row_index.get(k) for k in ("income_total", "total_cogs", "total_expenses", "net_income") if row_index.get(k) is not None]
 
     for col_i in project_cols:
-        # Skip columns with no income
-        if income_row is not None:
-            val = all_rows[income_row][col_i]
-            if not val or not isinstance(val, (int, float)) or val == 0:
-                continue
+        # Skip columns that are completely empty across all key financial rows
+        has_activity = False
+        for row_i in key_rows:
+            val = all_rows[row_i][col_i]
+            if val and isinstance(val, (int, float)) and val != 0:
+                has_activity = True
+                break
+        if not has_activity:
+            continue
 
         project = str(headers[col_i]).strip()
         record = {
