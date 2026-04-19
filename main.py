@@ -50,6 +50,86 @@ ACCOUNT_MAP = {
     "Total for Cost of Goods Sold":                 "total_cogs",
     # Key summary rows
     "Gross Profit":                                 "gross_profit",
+    # Expenses
+    "6010 Advertising & marketing":                 "advertising",
+    "6020 Auto & truck expense":                    "auto_truck",
+    "6030 Bank fees & service charges":             "bank_fees",
+    "6040 Building & property rent":                "building_rent",
+    "6050 Continuing education":                    "continuing_education",
+    "6060 Contract labor":                          "contract_labor",
+    "6070 Employee Drug Testing":                   "drug_testing",
+    "6080 General business expenses":               "general_business",
+    "6085 Bad Debt":                                "bad_debt",
+    "Total for 6080 General business expenses":     "general_business_total",
+    "6100 Insurance":                               "insurance",
+    "6105 MUB Umbrella General Liability Insurance":"umbrella_insurance",
+    "6110 Property insurance":                      "property_insurance",
+    "Total for 6100 Insurance":                     "insurance_total",
+    "6120 Interest expense":                        "interest_expense",
+    "6130 Legal & accounting services":             "legal_accounting",
+    "6135 Accounting fees":                         "accounting_fees",
+    "6140 Legal fees":                              "legal_fees",
+    "Total for 6130 Legal & accounting services":   "legal_accounting_total",
+    "6150 Meals & Entertainment":                   "meals_entertainment",
+    "6170 Memberships":                             "memberships",
+    "6180 Monthly Subscriptions":                   "subscriptions",
+    "6190 Office expenses":                         "office_expenses",
+    "Total for 6190 Office expenses":               "office_expenses_total",
+    "6300 Payroll expenses":                        "payroll_expenses",
+    "6325 Group term life insurance":               "group_life_insurance",
+    "6330 Health & accident plans":                 "health_accident",
+    "6400 Salaries & Wages (clearing)":             "salaries_wages_clearing",
+    "6490 Uniforms":                                "uniforms",
+    "6500 Virtual Assistants":                      "virtual_assistants",
+    "6510 Vision and Dental Insurance":             "vision_dental",
+    # Overhead Payroll
+    "6340 Overhead 401K Match":                     "overhead_401k",
+    "6345 Overhead Health Insurance":               "overhead_health",
+    "6350 Overhead Payroll Fees":                   "overhead_payroll_fees",
+    "6355 Overhead Payroll Taxes":                  "overhead_payroll_taxes",
+    "6360 Overhead Salaries & Wages":               "overhead_wages",
+    "Total for Overhead Payroll":                   "overhead_payroll_total",
+    # Production Payroll
+    "6370 Production 401K Match":                   "production_401k",
+    "6375 Production Health Insurance":             "production_health",
+    "6380 Production Payroll Fees":                 "production_payroll_fees",
+    "6385 Production Payroll Taxes":                "production_payroll_taxes",
+    "6390 Production PTO":                          "production_pto",
+    "6395 Production Salaries & Wages":             "production_wages",
+    "Total for Production Payroll":                 "production_payroll_total",
+    # Sales Staff Payroll
+    "6410 Sales Staff 401K Match":                  "sales_401k",
+    "6415 Sales Staff Health Insurance":            "sales_health",
+    "6420 Sales Staff Payroll Fees":                "sales_payroll_fees",
+    "6425 Sales Staff Payroll Taxes":               "sales_payroll_taxes",
+    "6430 Sales Staff Salaries & Wages":            "sales_wages",
+    "Total for Sales Staff Payroll":                "sales_payroll_total",
+    # Sheet Metal Shop Payroll
+    "6440 Sheet Metal PTO":                         "shop_pto",
+    "6445 Sheet Metal Shop Payroll Taxes":          "shop_payroll_taxes",
+    "6450 Sheet Metal Shop Salaries & Wages":       "shop_wages",
+    "6455 Shop 401K Match":                         "shop_401k",
+    "6465 Shop Payroll Fees":                       "shop_payroll_fees",
+    "Total for Sheet Metal Shop Payroll":           "shop_payroll_total",
+    "Total for 6300 Payroll expenses":              "payroll_expenses_total",
+    # Other expenses
+    "6520 Professional Fees":                       "professional_fees",
+    "6530 Property Maintenance":                    "property_maintenance",
+    "6540 Recruiting":                              "recruiting",
+    "6550 Repairs & maintenance":                   "repairs_maintenance",
+    "6570 Sales Tax Expense":                       "sales_tax",
+    "6580 Contractor's Tax":                        "contractors_tax",
+    "Total for 6570 Sales Tax Expense":             "sales_tax_total",
+    "6590 Shipping, freight & delivery":            "shipping_freight",
+    "6600 Supplies & materials":                    "supplies_materials",
+    "6610 Taxes paid":                              "taxes_paid",
+    "6640 Utilities":                               "utilities",
+    "Total for 6640 Utilities":                     "utilities_total",
+    "6670 Vehicle Expense":                         "vehicle_expense",
+    "Total for 6670 Vehicle Expense":               "vehicle_expense_total",
+    "6691 Contributions to charities":              "charitable_contributions",
+    "6696 Reimbursements":                          "reimbursements",
+    "Total for Expenses":                           "total_expenses",
     "Net Operating Income":                         "net_operating_income",
     "Net Income":                                   "net_income",
 }
@@ -82,7 +162,13 @@ def process_workbook(file_bytes):
             key = ACCOUNT_MAP[str(label).strip()]
             row_index[key] = i
 
-    # Only keep individual project columns — skip "Total for X", "Total", "Other", and blank
+    # Collect parent customer names from "Total for X" columns so we can exclude them
+    parent_names = set()
+    for h in headers:
+        if h and str(h).strip().startswith("Total for "):
+            parent_names.add(str(h).strip()[len("Total for "):])
+
+    # Only keep leaf-level project columns — skip totals, parents, "Total", and blank
     project_cols = []
     for i, h in enumerate(headers):
         if not h:
@@ -91,6 +177,8 @@ def process_workbook(file_bytes):
         if h_str in ("", "Total", "Other"):
             continue
         if h_str.startswith("Total for "):
+            continue
+        if h_str in parent_names:
             continue
         project_cols.append(i)
 
