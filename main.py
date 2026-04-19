@@ -256,20 +256,30 @@ def headers():
 
 @app.route('/process', methods=['POST'])
 def process():
+    include_headers = request.args.get('include_headers', 'false').lower() == 'true'
+
+    def build_response(file_bytes):
+        records = process_workbook(file_bytes)
+        if include_headers:
+            base = ["customer", "project", "job_number", "period"]
+            header_row = {f: f for f in base + ALL_FIELDS}
+            return jsonify([header_row] + records)
+        return jsonify(records)
+
     file = request.files.get('file')
     if file:
-        return jsonify(process_workbook(file.read()))
+        return build_response(file.read())
 
     if request.data:
         try:
-            return jsonify(process_workbook(request.data))
+            return build_response(request.data)
         except: pass
 
     if request.json:
         data = request.json.get('data') or request.json.get('file')
         if data:
             try:
-                return jsonify(process_workbook(base64.b64decode(data)))
+                return build_response(base64.b64decode(data))
             except Exception as e:
                 return jsonify({"error": str(e)}), 400
 
