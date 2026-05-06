@@ -70,6 +70,11 @@ ACCOUNT_MAP = {
     "6445 Sheet Metal Shop Payroll Taxes":          "shop_payroll_taxes",
     "6450 Sheet Metal Shop Salaries & Wages":       "shop_wages",
     "Shop Health Insurance":                        "shop_health_insurance",
+    # Company Contributions (under 6300 Payroll expenses)
+    "Retirement":                                   "retirement_contrib",
+    "Total for Company Contributions":              "company_contrib_total",
+    # Misc payroll taxes bucket (under 6300 Payroll expenses, no account code)
+    "Taxes":                                        "payroll_taxes_other",
     # Utilities sub-items
     "6660 Phone service":                           "utilities_phone",
     "Internet & TV services":                       "utilities_internet",
